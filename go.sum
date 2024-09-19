@@ -1,0 +1,6 @@
+github.com/rcrowley/mergician v0.0.0-20240708043836-fc53b110098e h1:3e7vXQbYuiQGCabrMZOjqK9iRBapb0ImBoF8xxTmDlk=
+github.com/rcrowley/mergician v0.0.0-20240708043836-fc53b110098e/go.mod h1:CKGnMNeLPXNyVQcpeLyQpF+Rui5eTj7ZoDFdJA4zQsc=
+golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 h1:vr/HnozRka3pE4EsMEg1lgkXJkTFJCVUX+S/ZT6wYzM=
+golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842/go.mod h1:XtvwrStGgqGPLc4cjQfWqZHG1YFdYs6swckp8vpsjnc=
+golang.org/x/net v0.19.0 h1:zTwKpTd2XuCqf8huc7Fo2iSy+4RHPd10s4KzeTnVr1c=
+golang.org/x/net v0.19.0/go.mod h1:CfAk/cbD4CthTvqiEl8NpboMuiuOYsAr/7NOjZJtv1U=
