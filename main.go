@@ -17,20 +17,17 @@ import (
 	"github.com/rcrowley/mergician/html"
 )
 
-func init() {
-	log.SetFlags(0)
-}
-
-func main() {
-	ignore := flag.String("i", "", "file containing links to ignore")
-	verbose := flag.Bool("v", false, "print the name of each scanned file to standard error")
-	flag.Usage = func() {
+func Main(args []string, stdin io.Reader, stdout io.Writer) {
+	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
+	ignore := flags.String("i", "", "file containing links to ignore")
+	verbose := flags.Bool("v", false, "print the name of each scanned file to standard error")
+	flags.Usage = func() {
 		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [<dirname>[...]]
   -i <ignore>  file containing links to ignore
   <dirname>    document root directory to scan for dead links (defaults to the current working directory)
 `)
 	}
-	flag.Parse()
+	flags.Parse(args[1:])
 
 	var ignored []string
 	if *ignore != "" {
@@ -49,10 +46,10 @@ func main() {
 	sort.Strings(ignored)
 
 	var dirnames []string
-	if flag.NArg() == 0 {
+	if flags.NArg() == 0 {
 		dirnames = []string{""}
 	} else {
-		dirnames = flag.Args()
+		dirnames = flags.Args()
 	}
 
 	deadlinks := must2(scan(dirnames, ignored, verbose))
@@ -70,6 +67,14 @@ func main() {
 	if len(deadlinks) > 0 {
 		os.Exit(1)
 	}
+}
+
+func init() {
+	log.SetFlags(0)
+}
+
+func main() {
+	Main(os.Args, os.Stdin, os.Stdout)
 }
 
 func must(err error) {
