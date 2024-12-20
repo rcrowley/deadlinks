@@ -25,6 +25,8 @@ func Main(args []string, stdin io.Reader, stdout io.Writer) {
 		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [<dirname>[...]]
   -i <ignore>  file containing links to ignore
   <dirname>    document root directory to scan for dead links (defaults to the current working directory)
+
+Synopsis: deadlinks scans one or more directories for <a>, <img>, <link rel="stylesheet">, <script>, and <style> elements with HTTP(S) URLs and reports any which do not respond with an HTTP status less than 400.
 `)
 	}
 	flags.Parse(args[1:])
@@ -132,8 +134,8 @@ func walker(dirname string, cache map[string]bool, ignored []string, verbose *bo
 		in := must2(html.ParseFile(filepath.Join(dirname, path)))
 		for _, out := range html.FindAll(in, html.Any(
 			html.Match(must2(html.ParseString(`<a>`))),
-			html.Match(must2(html.ParseString(`<link rel="stylesheet">`))),
 			html.Match(must2(html.ParseString(`<img>`))),
+			html.Match(must2(html.ParseString(`<link rel="stylesheet">`))),
 			html.Match(must2(html.ParseString(`<script>`))),
 			html.Match(must2(html.ParseString(`<style>`))),
 		)) {

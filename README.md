@@ -7,7 +7,7 @@ Installation
 ------------
 
 ```sh
-go get github.com/rcrowley/deadlinks
+go install github.com/rcrowley/deadlinks
 ```
 
 Usage
