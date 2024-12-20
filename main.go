@@ -54,7 +54,7 @@ Synopsis: deadlinks scans one or more directories for <a>, <img>, <link rel="sty
 		dirnames = flags.Args()
 	}
 
-	deadlinks := must2(scan(dirnames, ignored, verbose))
+	deadlinks := must2(scan(dirnames, ignored, verbose)) // TODO use files.All
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "\nfound %d dead links", len(deadlinks))
 		if len(deadlinks) > 0 {
