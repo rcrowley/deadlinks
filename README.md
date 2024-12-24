@@ -14,11 +14,11 @@ Usage
 -----
 
 ```sh
-deadlinks [-i <ignore>] [-v] [<dirname>[...]]
+deadlinks [-i <ignore>] [-v] [<docroot>[...]]
 ```
 
 * `-i <ignore>`: file containing links to ignore
-* `<dirname>`: document root directory to scan for dead links (defaults to the current working directory)
+* `<docroot>`: document root directory to scan for dead links (defaults to the current working directory)
 
 See also
 --------
