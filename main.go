@@ -29,7 +29,7 @@ func Main(args []string, stdin io.Reader, stdout io.Writer) {
   -x <exclude>  subdirectory of <docroot> to exclude (may be repeated)
   <docroot>     document root directory to scan for dead links (defaults to the current working directory)
 
-Synopsis: deadlinks scans one or more directories for <a>, <img>, <link rel="stylesheet">, <script>, and <style> elements with HTTP(S) URLs and reports any which do not respond with an HTTP status less than 400.
+Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in <a>, <form>, <img>, <link rel="stylesheet">, <script>, and <style> elements).
 `)
 	}
 	flags.Parse(args[1:])
@@ -99,7 +99,7 @@ func scan(lists []files.List, ignored []string, verbose *bool) (deadlinks []stri
 	for _, list := range lists {
 		for _, path := range list.RelativePaths() {
 			if *verbose {
-				log.Printf("scanning %s\n", filepath.Join(list.Root(), path))
+				log.Printf("scanning %s", filepath.Join(list.Root(), path))
 			}
 			dir := filepath.Dir(path)
 
