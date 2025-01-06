@@ -106,6 +106,7 @@ func scan(lists []files.List, ignored []string, verbose *bool) (deadlinks []stri
 			in := must2(html.ParseFile(filepath.Join(list.Root(), path)))
 			for _, out := range html.FindAll(in, html.Any(
 				html.Match(must2(html.ParseString(`<a>`))),
+				html.Match(must2(html.ParseString(`<form>`))),
 				html.Match(must2(html.ParseString(`<img>`))),
 				html.Match(must2(html.ParseString(`<link rel="stylesheet">`))),
 				html.Match(must2(html.ParseString(`<script>`))),
@@ -114,6 +115,9 @@ func scan(lists []files.List, ignored []string, verbose *bool) (deadlinks []stri
 				href := html.Attr(out, "href")
 				if href == "" {
 					href = html.Attr(out, "src") // different name but we treat it the same
+				}
+				if href == "" {
+					href = html.Attr(out, "action") // another; treat it the same, too
 				}
 				if href == "" || href == "#" {
 					continue
