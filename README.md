@@ -22,7 +22,7 @@ deadlinks [-i <ignore>] [-v] [-x <exclude>[...]] [<docroot>[...]]
 * `-i <ignore>`: file containing links to ignore
 * `-v`: print the name of each scanned file to standard error
 * `-x <exclude>`: subdirectory of `<docroot>` to exclude (may be repeated)
-* `<docroot>[...]`: document root directory to scan for dead links (defaults to the current working directory)
+* `<docroot>`: document root directory to scan for dead links (defaults to the current working directory)
 
 See also
 --------
