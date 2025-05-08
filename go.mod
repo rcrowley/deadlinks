@@ -1,6 +1,6 @@
 module github.com/rcrowley/deadlinks
 
-go 1.23
+go 1.24.3
 
 require github.com/rcrowley/mergician v0.0.0-20250207061004-fe37cb370b0c
 
