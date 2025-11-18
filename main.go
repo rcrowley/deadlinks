@@ -65,7 +65,7 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 	}
 	lists := must2(files.AllHTML(docroots, *exclude))
 
-	deadlinks := must2(scan(lists, ignored, timeout, printErrors, verbose))
+	deadlinks := must2(scan(lists, ignored, timeout, verbose))
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "\nfound %d dead links", len(deadlinks))
 		if len(deadlinks) > 0 {
@@ -74,12 +74,20 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 			fmt.Fprintln(os.Stderr, "!")
 		}
 	}
-	for _, href := range deadlinks {
-		fmt.Println(href)
+	for _, d := range deadlinks {
+		if *printErrors {
+			log.Print(d.err)
+		}
+		fmt.Println(d.href)
 	}
 	if len(deadlinks) > 0 {
 		os.Exit(1)
 	}
+}
+
+type deadlink struct {
+	href string
+	err  error
 }
 
 func init() {
@@ -105,7 +113,7 @@ func must2[T any](v T, err error) T {
 	return v
 }
 
-func scan(lists []files.List, ignored []string, timeout *int, printErrors, verbose *bool) (deadlinks []string, err error) {
+func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (deadlinks []deadlink, err error) {
 	cache := make(map[string]error)
 	for _, list := range lists {
 		for _, path := range list.RelativePaths() {
@@ -219,12 +227,11 @@ func scan(lists []files.List, ignored []string, timeout *int, printErrors, verbo
 
 	for href, err := range cache {
 		if err != nil {
-			if *printErrors {
-				log.Print(err)
-			}
-			deadlinks = append(deadlinks, href)
+			deadlinks = append(deadlinks, deadlink{href, err})
 		}
 	}
-	sort.Strings(deadlinks)
+	sort.Slice(deadlinks, func(i, j int) bool {
+		return deadlinks[i].href < deadlinks[j].href
+	})
 	return
 }

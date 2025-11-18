@@ -18,8 +18,8 @@ var (
 		"dead/",
 		"https://rcrowley.org/dead.html",
 	}
-	timeout              int = 10
-	printErrors, verbose bool
+	timeout int = 10
+	verbose bool
 )
 
 func TestScan(t *testing.T) {
@@ -27,11 +27,15 @@ func TestScan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deadlinks, err := scan(lists, []string{}, &timeout, &printErrors, &verbose)
+	deadlinks, err := scan(lists, []string{}, &timeout, &verbose)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(deadlinks, ignored) {
+	hrefs := make([]string, len(deadlinks))
+	for i, d := range deadlinks {
+		hrefs[i] = d.href
+	}
+	if !slices.Equal(hrefs, ignored) {
 		t.Fatal(deadlinks)
 	}
 }
@@ -41,7 +45,7 @@ func TestScanIgnore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deadlinks, err := scan(lists, ignored, &timeout, &printErrors, &verbose)
+	deadlinks, err := scan(lists, ignored, &timeout, &verbose)
 	if err != nil {
 		t.Fatal(err)
 	}
