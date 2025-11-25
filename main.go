@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/rcrowley/mergician/files"
 	"github.com/rcrowley/mergician/html"
 )
 
@@ -21,10 +22,13 @@ func Main(args []string, stdin io.Reader, stdout io.Writer) {
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 	ignore := flags.String("i", "", "file containing links to ignore")
 	verbose := flags.Bool("v", false, "print the name of each scanned file to standard error")
+	exclude := files.NewStringSliceFlag(flags, "x", "subdirectory of <input> to exclude (may be repeated)")
 	flags.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [<docroot>[...]]
-  -i <ignore>  file containing links to ignore
-  <docroot>    document root directory to scan for dead links (defaults to the current working directory)
+		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [-x <exclude>[...]] [<docroot>[...]]
+  -i <ignore>   file containing links to ignore
+  -v            print the name of each scanned file to standard error
+  -x <exclude>  subdirectory of <docroot> to exclude (may be repeated)
+  <docroot>     document root directory to scan for dead links (defaults to the current working directory)
 
 Synopsis: deadlinks scans one or more directories for <a>, <img>, <link rel="stylesheet">, <script>, and <style> elements with HTTP(S) URLs and reports any which do not respond with an HTTP status less than 400.
 `)
