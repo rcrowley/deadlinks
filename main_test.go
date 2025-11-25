@@ -3,6 +3,8 @@ package main
 import (
 	"slices"
 	"testing"
+
+	"github.com/rcrowley/mergician/files"
 )
 
 var (
@@ -11,7 +13,11 @@ var (
 )
 
 func TestScan(t *testing.T) {
-	deadlinks, err := scan([]string{"testdata"}, []string{}, &verbose)
+	lists, err := files.AllHTML([]string{"testdata"}, []string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadlinks, err := scan(lists, []string{}, &verbose)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +27,11 @@ func TestScan(t *testing.T) {
 }
 
 func TestScanIgnore(t *testing.T) {
-	deadlinks, err := scan([]string{"testdata"}, ignored, &verbose)
+	lists, err := files.AllHTML([]string{"testdata"}, []string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadlinks, err := scan(lists, ignored, &verbose)
 	if err != nil {
 		t.Fatal(err)
 	}
