@@ -8,7 +8,16 @@ import (
 )
 
 var (
-	ignored = []string{"../dead.html", "/dead.html", "/dead/", "dead/", "https://rcrowley.org/dead.html"}
+	ignored = []string{ // or the expected result when not ignoring anything
+		"../dead.html",
+		"/dead.css",
+		"/dead.html",
+		"/dead.js",
+		"/dead.php",
+		"/dead/",
+		"dead/",
+		"https://rcrowley.org/dead.html",
+	}
 	verbose bool
 )
 
