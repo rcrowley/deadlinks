@@ -24,14 +24,16 @@ func Main(args []string, stdin io.Reader, stdout io.Writer) {
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 	printErrors := flags.Bool("e", false, "print the error for every URL on the deadlinks list to standard error")
 	ignore := flags.String("i", "", "file containing links to ignore")
-	timeout := flags.Int("t", 10, "timeout (in seconds) for HEAD requests (default 10 seconds)")
+	retries := flags.Int("r", 2, "number of times to retry each request (default 2 i.e. 3 total tries)")
+	timeout := flags.Int("t", 10, "timeout (in seconds) for GET requests (default 10 seconds)")
 	verbose := flags.Bool("v", false, "print the name of each scanned file to standard error")
 	exclude := files.NewStringSliceFlag(flags, "x", "subdirectory of <input> to exclude (may be repeated)")
 	flags.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: deadlinks [-e] [-i <ignore>] [-t <timeout>] [-v] [-x <exclude>[...]] [<docroot>[...]]
+		fmt.Fprint(os.Stderr, `Usage: deadlinks [-e] [-i <ignore>] [-r <retries>] [-t <timeout>] [-v] [-x <exclude>[...]] [<docroot>[...]]
   -e            print the error for every URL on the deadlinks list to standard error
   -i <ignore>   file containing links to ignore
-  -t <timeout>  timeout (in seconds) for HEAD requests (default 10 seconds)
+  -r <retries>  number of times to retry each request (default 2 i.e. 3 total tries)
+  -t <timeout>  timeout (in seconds) for GET requests (default 10 seconds)
   -v            print the name of each scanned file to standard error
   -x <exclude>  subdirectory of <docroot> to exclude (may be repeated)
   <docroot>     document root directory to scan for dead links (defaults to the current working directory; may be repeated)
@@ -65,7 +67,7 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 	}
 	lists := must2(files.AllHTML(docroots, *exclude))
 
-	deadlinks := must2(scan(lists, ignored, timeout, verbose))
+	deadlinks := must2(scan(lists, ignored, retries, timeout, verbose))
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "\nfound %d dead links", len(deadlinks))
 		if len(deadlinks) > 0 {
@@ -88,6 +90,29 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 type deadlink struct {
 	href string
 	err  error
+}
+
+func get(u *url.URL, timeout *int) error {
+	ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(*timeout)*time.Second))
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0") // pretend a bit to be real
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode < http.StatusBadRequest {
+		return nil
+	} else if resp.StatusCode == http.StatusForbidden { // often used to ward off scrapers
+		return nil
+	} else if resp.StatusCode == 429 && (req.URL.Host == "github.com" || req.URL.Host == "www.github.com") { // TODO backoff and retry
+		return nil
+	} else if resp.StatusCode == 520 && (req.URL.Host == "twitter.com" || req.URL.Host == "www.twitter.com") {
+		return nil
+	}
+	return errors.New(resp.Status)
 }
 
 func init() {
@@ -113,7 +138,7 @@ func must2[T any](v T, err error) T {
 	return v
 }
 
-func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (deadlinks []deadlink, err error) {
+func scan(lists []files.List, ignored []string, retries, timeout *int, verbose *bool) (deadlinks []deadlink, err error) {
 	cache := make(map[string]error)
 	for _, list := range lists {
 		for _, path := range list.RelativePaths() {
@@ -161,29 +186,13 @@ func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (de
 				if u.Scheme == "http" || u.Scheme == "https" {
 					fragment := u.Fragment
 					u.Fragment = ""
-					ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(*timeout)*time.Second))
-					req, err := http.NewRequestWithContext(ctx, "HEAD", u.String(), nil)
-					if err != nil {
-						cache[href] = fmt.Errorf("<%s>: %s", href, err)
-					}
-					req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0") // pretend a bit to be real
-					resp, err := http.DefaultClient.Do(req)
-					if err == nil {
-						if resp.StatusCode < http.StatusBadRequest {
-							cache[href] = nil
-						} else if resp.StatusCode == http.StatusForbidden { // often used to ward off scrapers
-							cache[href] = nil
-						} else if resp.StatusCode == http.StatusMethodNotAllowed { // TODO retry with GET
-							cache[href] = nil
-						} else if resp.StatusCode == 429 && (req.URL.Host == "github.com" || req.URL.Host == "www.github.com") { // TODO backoff and retry
-							cache[href] = nil
-						} else if resp.StatusCode == 520 && (req.URL.Host == "twitter.com" || req.URL.Host == "www.twitter.com") {
-							cache[href] = nil
-						} else {
-							cache[href] = fmt.Errorf("<%s>: %s", u, resp.Status)
+					for i := 0; i <= *retries; i++ {
+						err := get(u, timeout)
+						if err == nil {
+							break
 						}
-					} else {
-						cache[href] = fmt.Errorf("<%s>: %s", u, err)
+						cache[href] = fmt.Errorf("<%s>: %s", href, err)
+						time.Sleep(time.Duration(*timeout) * time.Second)
 					}
 					u.Fragment = fragment
 
