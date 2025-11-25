@@ -1,7 +1,7 @@
 Deadlinks
 =========
 
-Deadlinks scans all the HTML documents in a document root directory for dead links, meaning any `<a>`, `<img>`, `<link rel="stylesheet">`, `<script>`, or `<style>` elements with HTTP(S) URLs and reports any which do not respond with an HTTP status less than 400.
+Deadlinks scans all the HTML documents in a document root directory for dead links. A link is considered dead if it refers to a local URL path, relative or absolute, that doesn't exist or responds with an HTTP status less than 400. It scans all `<a href="...">`, `<form action="...">`, `<img src="...">`, `<link href="..." rel="stylesheet">`, `<script src="...">`, or `<style src="...">` elements.
 
 It's intended to be used almost like spellcheck in a CI process or pre-commit hook.
 
@@ -16,10 +16,11 @@ Usage
 -----
 
 ```sh
-deadlinks [-i <ignore>] [-v] [<docroot>[...]]
+deadlinks [-i <ignore>] [-v] [-x <exclude>[...]] [<docroot>[...]]
 ```
 
 * `-i <ignore>`: file containing links to ignore
+* `-v`: print the name of each scanned file to standard error
 * `-x <exclude>`: subdirectory of `<docroot>` to exclude (may be repeated)
 * `<docroot>`: document root directory to scan for dead links (defaults to the current working directory)
 
