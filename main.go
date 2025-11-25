@@ -56,7 +56,6 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 	} else {
 		docroots = flags.Args()
 	}
-	log.Printf("%#v", docroots)
 	lists := must2(files.AllHTML(docroots, *exclude))
 
 	deadlinks := must2(scan(lists, ignored, verbose))
