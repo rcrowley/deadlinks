@@ -2,9 +2,10 @@ module github.com/rcrowley/deadlinks
 
 go 1.23
 
-require github.com/rcrowley/mergician v0.0.0-20240708043836-fc53b110098e
+require github.com/rcrowley/mergician v0.0.0-20241014060337-e6babab1ff1a
 
 require (
-	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
-	golang.org/x/net v0.19.0 // indirect
+	github.com/yuin/goldmark v1.7.8 // indirect
+	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
+	golang.org/x/net v0.30.0 // indirect
 )
