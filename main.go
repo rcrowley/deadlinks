@@ -27,7 +27,7 @@ func Main(args []string, stdin io.Reader, stdout io.Writer) {
   -i <ignore>   file containing links to ignore
   -v            print the name of each scanned file to standard error
   -x <exclude>  subdirectory of <docroot> to exclude (may be repeated)
-  <docroot>     document root directory to scan for dead links (defaults to the current working directory)
+  <docroot>     document root directory to scan for dead links (defaults to the current working directory; may be repeated)
 
 Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in <a>, <form>, <img>, <link rel="stylesheet">, <script>, and <style> elements).
 `)
