@@ -26,7 +26,7 @@ func main() {
 	verbose := flag.Bool("v", false, "print the name of each scanned file to standard error")
 	flag.Usage = func() {
 		fmt.Fprint(os.Stderr, `Usage: deadlinks [-v] [<dirname>[...]]
-  <dirname>  pathname to a document root directory to scan for dead links (defaults to the current working directory)
+  <dirname>  document root directory to scan for dead links (defaults to the current working directory)
 `)
 	}
 	flag.Parse()
