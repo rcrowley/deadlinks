@@ -52,10 +52,11 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 
 	var docroots []string
 	if flags.NArg() == 0 {
-		docroots = []string{""}
+		docroots = []string{"."}
 	} else {
 		docroots = flags.Args()
 	}
+	log.Printf("%#v", docroots)
 	lists := must2(files.AllHTML(docroots, *exclude))
 
 	deadlinks := must2(scan(lists, ignored, verbose))
@@ -76,7 +77,7 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 }
 
 func init() {
-	log.SetFlags(0)
+	log.SetFlags(log.Lshortfile)
 }
 
 func main() {
@@ -85,7 +86,7 @@ func main() {
 
 func must(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 }
 
