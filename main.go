@@ -22,11 +22,13 @@ import (
 func Main(args []string, stdin io.Reader, stdout io.Writer) {
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 	ignore := flags.String("i", "", "file containing links to ignore")
+	timeout := flags.Int("t", 10, "timeout (in seconds) for HEAD requests (default 10 seconds)")
 	verbose := flags.Bool("v", false, "print the name of each scanned file to standard error")
 	exclude := files.NewStringSliceFlag(flags, "x", "subdirectory of <input> to exclude (may be repeated)")
 	flags.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [-x <exclude>[...]] [<docroot>[...]]
+		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-t <timeout>] [-v] [-x <exclude>[...]] [<docroot>[...]]
   -i <ignore>   file containing links to ignore
+  -t <timeout>  timeout (in seconds) for HEAD requests (default 10 seconds)
   -v            print the name of each scanned file to standard error
   -x <exclude>  subdirectory of <docroot> to exclude (may be repeated)
   <docroot>     document root directory to scan for dead links (defaults to the current working directory; may be repeated)
@@ -60,7 +62,7 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 	}
 	lists := must2(files.AllHTML(docroots, *exclude))
 
-	deadlinks := must2(scan(lists, ignored, verbose))
+	deadlinks := must2(scan(lists, ignored, timeout, verbose))
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "\nfound %d dead links", len(deadlinks))
 		if len(deadlinks) > 0 {
@@ -96,7 +98,7 @@ func must2[T any](v T, err error) T {
 	return v
 }
 
-func scan(lists []files.List, ignored []string, verbose *bool) (deadlinks []string, err error) {
+func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (deadlinks []string, err error) {
 	cache := make(map[string]bool)
 	for _, list := range lists {
 		for _, path := range list.RelativePaths() {
@@ -145,7 +147,7 @@ func scan(lists []files.List, ignored []string, verbose *bool) (deadlinks []stri
 				if u.Scheme == "http" || u.Scheme == "https" {
 					fragment := u.Fragment
 					u.Fragment = ""
-					ctx, _ := context.WithDeadline(context.TODO(), time.Now().Add(10*time.Second))
+					ctx, _ := context.WithDeadline(context.TODO(), time.Now().Add(time.Duration(*timeout)*time.Second))
 					req, err := http.NewRequestWithContext(ctx, "HEAD", u.String(), nil)
 					if err != nil {
 						log.Print(err)
