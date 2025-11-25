@@ -175,9 +175,9 @@ func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (de
 							cache[href] = nil
 						} else if resp.StatusCode == http.StatusMethodNotAllowed { // TODO retry with GET
 							cache[href] = nil
-						} else if resp.StatusCode == 429 && req.URL.Host == "github.com" { // TODO retry instead of assuming
+						} else if resp.StatusCode == 429 && (req.URL.Host == "github.com" || req.URL.Host == "www.github.com") { // TODO backoff and retry
 							cache[href] = nil
-						} else if resp.StatusCode == 520 && req.URL.Host == "twitter.com" {
+						} else if resp.StatusCode == 520 && (req.URL.Host == "twitter.com" || req.URL.Host == "www.twitter.com") {
 							cache[href] = nil
 						} else {
 							cache[href] = fmt.Errorf("<%s>: %s", u, resp.Status)
