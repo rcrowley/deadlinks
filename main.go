@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -21,12 +22,14 @@ import (
 
 func Main(args []string, stdin io.Reader, stdout io.Writer) {
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
+	printErrors := flags.Bool("e", false, "print the error for every URL on the deadlinks list to standard error")
 	ignore := flags.String("i", "", "file containing links to ignore")
 	timeout := flags.Int("t", 10, "timeout (in seconds) for HEAD requests (default 10 seconds)")
 	verbose := flags.Bool("v", false, "print the name of each scanned file to standard error")
 	exclude := files.NewStringSliceFlag(flags, "x", "subdirectory of <input> to exclude (may be repeated)")
 	flags.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-t <timeout>] [-v] [-x <exclude>[...]] [<docroot>[...]]
+		fmt.Fprint(os.Stderr, `Usage: deadlinks [-e] [-i <ignore>] [-t <timeout>] [-v] [-x <exclude>[...]] [<docroot>[...]]
+  -e            print the error for every URL on the deadlinks list to standard error
   -i <ignore>   file containing links to ignore
   -t <timeout>  timeout (in seconds) for HEAD requests (default 10 seconds)
   -v            print the name of each scanned file to standard error
@@ -62,7 +65,7 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 	}
 	lists := must2(files.AllHTML(docroots, *exclude))
 
-	deadlinks := must2(scan(lists, ignored, timeout, verbose))
+	deadlinks := must2(scan(lists, ignored, timeout, printErrors, verbose))
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "\nfound %d dead links", len(deadlinks))
 		if len(deadlinks) > 0 {
@@ -102,8 +105,8 @@ func must2[T any](v T, err error) T {
 	return v
 }
 
-func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (deadlinks []string, err error) {
-	cache := make(map[string]bool)
+func scan(lists []files.List, ignored []string, timeout *int, printErrors, verbose *bool) (deadlinks []string, err error) {
+	cache := make(map[string]error)
 	for _, list := range lists {
 		for _, path := range list.RelativePaths() {
 			if *verbose {
@@ -144,45 +147,43 @@ func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (de
 
 				u, err := url.Parse(href)
 				if err != nil {
-					log.Print(err)
-					cache[href] = false
+					cache[href] = fmt.Errorf("<%s>: %s", href, err)
 				}
 
 				if u.Scheme == "http" || u.Scheme == "https" {
 					fragment := u.Fragment
 					u.Fragment = ""
-					ctx, _ := context.WithDeadline(context.TODO(), time.Now().Add(time.Duration(*timeout)*time.Second))
+					ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(*timeout)*time.Second))
 					req, err := http.NewRequestWithContext(ctx, "HEAD", u.String(), nil)
 					if err != nil {
-						log.Print(err)
-						cache[href] = false
+						cache[href] = fmt.Errorf("<%s>: %s", href, err)
 					}
 					req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0") // pretend a bit to be real
 					resp, err := http.DefaultClient.Do(req)
 					if err == nil {
 						if resp.StatusCode < http.StatusBadRequest {
-							cache[href] = true
+							cache[href] = nil
 						} else if resp.StatusCode == http.StatusForbidden { // often used to ward off scrapers
-							cache[href] = true
+							cache[href] = nil
+						} else if resp.StatusCode == http.StatusMethodNotAllowed { // TODO retry with GET
+							cache[href] = nil
+						} else if resp.StatusCode == 429 && req.URL.Host == "github.com" { // TODO retry instead of assuming
+							cache[href] = nil
+						} else if resp.StatusCode == 520 && req.URL.Host == "twitter.com" {
+							cache[href] = nil
 						} else {
-							if *verbose {
-								log.Printf("<%s>: %s", u, resp.Status)
-							}
-							cache[href] = false
+							cache[href] = fmt.Errorf("<%s>: %s", u, resp.Status)
 						}
 					} else {
-						if *verbose {
-							log.Printf("<%s>: %v", u, err)
-						}
-						cache[href] = false
+						cache[href] = fmt.Errorf("<%s>: %s", u, err)
 					}
 					u.Fragment = fragment
 
 				} else if u.Scheme == "mailto" {
-					cache[href] = true // TODO test this mailbox by actually connecting to the SMTP server
+					cache[href] = nil // TODO test this mailbox by actually connecting to the SMTP server
 
 				} else if u.Scheme == "tel" {
-					cache[href] = true // we're not going to try to verify phone numbers, come on
+					cache[href] = nil // we're not going to try to verify phone numbers, come on
 
 				} else if u.Path != "" {
 					hrefPath := u.Path
@@ -190,11 +191,11 @@ func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (de
 						hrefPath = filepath.Join(dir, u.Path)
 					}
 					if fi, err := os.Stat(filepath.Join(list.Root(), hrefPath)); err == nil && !fi.IsDir() {
-						cache[href] = true
+						cache[href] = nil
 					} else if fi, err := os.Stat(filepath.Join(list.Root(), hrefPath, "index.html")); err == nil && !fi.IsDir() {
-						cache[href] = true
+						cache[href] = nil
 					} else {
-						cache[href] = false
+						cache[href] = fmt.Errorf("<%s>: %s", href, errors.New("not found in document root"))
 					}
 
 				} else if fragment := u.EscapedFragment(); fragment != "" {
@@ -202,19 +203,25 @@ func scan(lists []files.List, ignored []string, timeout *int, verbose *bool) (de
 					if id, err := url.QueryUnescape(fragment); err == nil {
 						matcher = html.Any(matcher, html.HasAttr("id", id))
 					}
-					cache[href] = html.Find(in, matcher) != nil
+					if html.Find(in, matcher) != nil {
+						cache[href] = nil
+					} else {
+						cache[href] = fmt.Errorf("<#%s>: %s", fragment, errors.New("not found"))
+					}
 
 				} else {
-					cache[href] = false
-					log.Printf("unclear how to test %s", href)
+					cache[href] = fmt.Errorf("<%s>: %s", href, errors.New("unclear how to test"))
 
 				}
 			}
 		}
 	}
 
-	for href, ok := range cache {
-		if !ok {
+	for href, err := range cache {
+		if err != nil {
+			if *printErrors {
+				log.Print(err)
+			}
 			deadlinks = append(deadlinks, href)
 		}
 	}

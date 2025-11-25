@@ -18,8 +18,8 @@ var (
 		"dead/",
 		"https://rcrowley.org/dead.html",
 	}
-	timeout int = 10
-	verbose bool
+	timeout              int = 10
+	printErrors, verbose bool
 )
 
 func TestScan(t *testing.T) {
@@ -27,7 +27,7 @@ func TestScan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deadlinks, err := scan(lists, []string{}, &timeout, &verbose)
+	deadlinks, err := scan(lists, []string{}, &timeout, &printErrors, &verbose)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestScanIgnore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deadlinks, err := scan(lists, ignored, &timeout, &verbose)
+	deadlinks, err := scan(lists, ignored, &timeout, &printErrors, &verbose)
 	if err != nil {
 		t.Fatal(err)
 	}
