@@ -11,7 +11,7 @@ var (
 )
 
 func TestScan(t *testing.T) {
-	deadlinks, err := scan([]string{"test"}, []string{}, &verbose)
+	deadlinks, err := scan([]string{"testdata"}, []string{}, &verbose)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func TestScan(t *testing.T) {
 }
 
 func TestScanIgnore(t *testing.T) {
-	deadlinks, err := scan([]string{"test"}, ignored, &verbose)
+	deadlinks, err := scan([]string{"testdata"}, ignored, &verbose)
 	if err != nil {
 		t.Fatal(err)
 	}
