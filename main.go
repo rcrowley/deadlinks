@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/rcrowley/mergician/files"
 	"github.com/rcrowley/mergician/html"
@@ -76,7 +78,7 @@ Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in
 }
 
 func init() {
-	log.SetFlags(log.Lshortfile)
+	log.SetFlags(0)
 }
 
 func main() {
@@ -141,8 +143,34 @@ func scan(lists []files.List, ignored []string, verbose *bool) (deadlinks []stri
 				}
 
 				if u.Scheme == "http" || u.Scheme == "https" {
-					resp, err := http.Head(u.String())
-					cache[href] = err == nil && resp.StatusCode < http.StatusBadRequest
+					fragment := u.Fragment
+					u.Fragment = ""
+					ctx, _ := context.WithDeadline(context.TODO(), time.Now().Add(10*time.Second))
+					req, err := http.NewRequestWithContext(ctx, "HEAD", u.String(), nil)
+					if err != nil {
+						log.Print(err)
+						cache[href] = false
+					}
+					req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0") // pretend a bit to be real
+					resp, err := http.DefaultClient.Do(req)
+					if err == nil {
+						if resp.StatusCode < http.StatusBadRequest {
+							cache[href] = true
+						} else if resp.StatusCode == http.StatusForbidden { // often used to ward off scrapers
+							cache[href] = true
+						} else {
+							if *verbose {
+								log.Printf("<%s>: %s", u, resp.Status)
+							}
+							cache[href] = false
+						}
+					} else {
+						if *verbose {
+							log.Printf("<%s>: %v", u, err)
+						}
+						cache[href] = false
+					}
+					u.Fragment = fragment
 
 				} else if u.Scheme == "mailto" {
 					cache[href] = true // TODO test this mailbox by actually connecting to the SMTP server
