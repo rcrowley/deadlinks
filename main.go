@@ -22,9 +22,9 @@ func Main(args []string, stdin io.Reader, stdout io.Writer) {
 	ignore := flags.String("i", "", "file containing links to ignore")
 	verbose := flags.Bool("v", false, "print the name of each scanned file to standard error")
 	flags.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [<dirname>[...]]
+		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [<docroot>[...]]
   -i <ignore>  file containing links to ignore
-  <dirname>    document root directory to scan for dead links (defaults to the current working directory)
+  <docroot>    document root directory to scan for dead links (defaults to the current working directory)
 
 Synopsis: deadlinks scans one or more directories for <a>, <img>, <link rel="stylesheet">, <script>, and <style> elements with HTTP(S) URLs and reports any which do not respond with an HTTP status less than 400.
 `)
@@ -47,14 +47,14 @@ Synopsis: deadlinks scans one or more directories for <a>, <img>, <link rel="sty
 	}
 	sort.Strings(ignored)
 
-	var dirnames []string
+	var docroots []string
 	if flags.NArg() == 0 {
-		dirnames = []string{""}
+		docroots = []string{""}
 	} else {
-		dirnames = flags.Args()
+		docroots = flags.Args()
 	}
 
-	deadlinks := must2(scan(dirnames, ignored, verbose)) // TODO use files.All
+	deadlinks := must2(scan(docroots, ignored, verbose)) // TODO use files.All
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "\nfound %d dead links", len(deadlinks))
 		if len(deadlinks) > 0 {
@@ -90,21 +90,21 @@ func must2[T any](v T, err error) T {
 	return v
 }
 
-func scan(dirnames, ignored []string, verbose *bool) (deadlinks []string, err error) {
+func scan(dirs, ignored []string, verbose *bool) (deadlinks []string, err error) {
 	cache := make(map[string]bool)
-	for _, dirname := range dirnames {
-		if dirname, err = filepath.Abs(dirname); err != nil {
+	for _, dir := range dirs {
+		if dir, err = filepath.Abs(dir); err != nil {
 			return
 		}
-		walk := walker(dirname, cache, ignored, verbose)
+		walk := walker(dir, cache, ignored, verbose)
 		var fi fs.FileInfo
-		if fi, err = os.Stat(dirname); err != nil {
+		if fi, err = os.Stat(dir); err != nil {
 			return
 		}
 		if fi.IsDir() {
-			err = fs.WalkDir(os.DirFS(dirname), ".", walk)
+			err = fs.WalkDir(os.DirFS(dir), ".", walk)
 		} else {
-			err = walk(dirname, fs.FileInfoToDirEntry(fi), nil)
+			err = walk(dir, fs.FileInfoToDirEntry(fi), nil)
 		}
 		if err != nil {
 			return
@@ -120,7 +120,7 @@ func scan(dirnames, ignored []string, verbose *bool) (deadlinks []string, err er
 	return
 }
 
-func walker(dirname string, cache map[string]bool, ignored []string, verbose *bool) func(string, fs.DirEntry, error) error {
+func walker(dir string, cache map[string]bool, ignored []string, verbose *bool) func(string, fs.DirEntry, error) error {
 	return func(path string, d fs.DirEntry, err error) error {
 		must(err)
 
@@ -128,10 +128,10 @@ func walker(dirname string, cache map[string]bool, ignored []string, verbose *bo
 			return nil
 		}
 		if *verbose {
-			log.Printf("scanning %s\n", filepath.Join(dirname, path))
+			log.Printf("scanning %s\n", filepath.Join(dir, path))
 		}
 
-		in := must2(html.ParseFile(filepath.Join(dirname, path)))
+		in := must2(html.ParseFile(filepath.Join(dir, path)))
 		for _, out := range html.FindAll(in, html.Any(
 			html.Match(must2(html.ParseString(`<a>`))),
 			html.Match(must2(html.ParseString(`<img>`))),
@@ -179,9 +179,9 @@ func walker(dirname string, cache map[string]bool, ignored []string, verbose *bo
 				if !strings.HasPrefix(u.Path, "/") {
 					hrefPath = filepath.Join(filepath.Dir(path), u.Path)
 				}
-				if fi, err := os.Stat(filepath.Join(dirname, hrefPath)); err == nil && !fi.IsDir() {
+				if fi, err := os.Stat(filepath.Join(dir, hrefPath)); err == nil && !fi.IsDir() {
 					cache[href] = true
-				} else if fi, err := os.Stat(filepath.Join(dirname, hrefPath, "index.html")); err == nil && !fi.IsDir() {
+				} else if fi, err := os.Stat(filepath.Join(dir, hrefPath, "index.html")); err == nil && !fi.IsDir() {
 					cache[href] = true
 				} else {
 					cache[href] = false
