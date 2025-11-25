@@ -25,8 +25,9 @@ func main() {
 	ignore := flag.String("i", "", "file containing links to ignore")
 	verbose := flag.Bool("v", false, "print the name of each scanned file to standard error")
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, `Usage: deadlinks [-v] [<dirname>[...]]
-  <dirname>  document root directory to scan for dead links (defaults to the current working directory)
+		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [<dirname>[...]]
+  -i <ignore>  file containing links to ignore
+  <dirname>    document root directory to scan for dead links (defaults to the current working directory)
 `)
 	}
 	flag.Parse()
