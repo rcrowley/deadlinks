@@ -23,7 +23,7 @@ deadlinks [-i <ignore>] [-v] [<dirname>[...]]
 See also
 --------
 
-Deadlinks is part of the [Mergician](https://github.com/rcrowley/mergician) suite ot tools that manipulate HTML documents:
+Deadlinks is part of the [Mergician](https://github.com/rcrowley/mergician) suite of tools that manipulate HTML documents:
 
 * [Electrostatic](https://github.com/rcrowley/electrostatic): Mergician-powered, pure-HTML CMS
 * [Frag](https://github.com/rcrowley/frag): Extract fragments of HTML documents
