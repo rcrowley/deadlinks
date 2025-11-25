@@ -24,10 +24,10 @@ func Main(args []string, stdin io.Reader, stdout io.Writer) {
 	exclude := files.NewStringSliceFlag(flags, "x", "subdirectory of <input> to exclude (may be repeated)")
 	flags.Usage = func() {
 		fmt.Fprint(os.Stderr, `Usage: deadlinks [-i <ignore>] [-v] [-x <exclude>[...]] [<docroot>[...]]
-  -i <ignore>   file containing links to ignore
-  -v            print the name of each scanned file to standard error
-  -x <exclude>  subdirectory of <docroot> to exclude (may be repeated)
-  <docroot>     document root directory to scan for dead links (defaults to the current working directory)
+  -i <ignore>     file containing links to ignore
+  -v              print the name of each scanned file to standard error
+  -x <exclude>    subdirectory of <docroot> to exclude (may be repeated)
+  <docroot>[...]  document root directory to scan for dead links (defaults to the current working directory)
 
 Synopsis: deadlinks scans all the HTML documents in <docroot> for dead links (in <a>, <form>, <img>, <link rel="stylesheet">, <script>, and <style> elements).
 `)
